@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StarMaint AI Assistant</title>
+  <style>
+    /* Revised CSS for improved layout and responsiveness */
+    :root {
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --primary-light: #dbeafe;
+      --secondary: #4f46e5;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --gray-50: #f9fafb;
+      --gray-200: #e5e7eb;
+      --gray-400: #9ca3af;
+      --gray-600: #4b5563;
+      --font-sans: 'Inter', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--gray-50);
+      color: var(--gray-600);
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+    }
+    .header h1 {
+      color: var(--primary);
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .header p { font-size: 1.25rem; margin-bottom: 2rem; }
+    .open-ai-assistant {
+      padding: 12px 24px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .ai-assistant-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
+    .ai-chat-button {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ai-chat-panel {
+      position: absolute;
+      bottom: 80px;
+      right: 0;
+      width: 360px;
+      height: 520px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(20px);
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    .ai-chat-panel.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+    .ai-chat-panel.fullscreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      border-radius: 0;
+      margin: 0;
+    }
+    .ai-chat-header {
+      background: var(--primary);
+      color: white;
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ai-chat-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ai-chat-title h3 { font-size: 16px; }
+    .ai-chat-title span {
+      font-size: 10px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      color: white;
+    }
+    .ai-badge-system { background: var(--danger); }
+    .ai-badge-premium { background: var(--warning); }
+    .ai-chat-controls button {
+      background: rgba(255, 255, 255, 0.3);
+      border: none;
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+    .ai-chat-body {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+      background: var(--gray-50);
+    }
+    .ai-chat-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .ai-message {
+      display: flex;
+      gap: 8px;
+      max-width: 80%;
+    }
+    .ai-message.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+    .ai-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .ai-message-content {
+      background: white;
+      padding: 8px 12px;
+      border-radius: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .ai-chat-input-container {
+      display: flex;
+      border-top: 1px solid var(--gray-200);
+      padding: 8px;
+    }
+    .ai-chat-input {
+      flex: 1;
+      padding: 8px;
+      font-size: 14px;
+      border: 1px solid var(--gray-200);
+      border-radius: 20px;
+      resize: none;
+    }
+    .ai-send-button, .ai-voice-button {
+      background: var(--primary);
+      border: none;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      margin-left: 8px;
+      font-size: 16px;
+    }
+    .system-status-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--gray-600);
+      color: white;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+    }
+    /* Simple typing indicator dots */
+    .ai-typing-indicator {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .ai-typing-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--gray-400);
+      animation: typing 1s infinite;
+    }
+    @keyframes typing {
+      0% { opacity: 0.4; }
+      50% { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+    /* Responsive adjustments */
+    @media (max-width: 480px) {
+      .ai-chat-panel {
+        width: calc(100vw - 40px);
+        height: 480px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>StarMaint AI Assistant</h1>
+      <p>Enhanced with full system control, integrated web search, voice input, and TTS (via meSpeak.js)</p>
+    </header>
+    <button id="open-ai-assistant" class="open-ai-assistant">Open AI Assistant</button>
+  </div>
+  
+  <div class="ai-assistant-container">
+    <button id="ai-chat-button" class="ai-chat-button" aria-label="Open AI Assistant">🤖</button>
+    <div id="ai-chat-panel" class="ai-chat-panel" aria-hidden="true">
+      <div class="ai-chat-header">
+        <div class="ai-chat-title">
+          🤖 <h3>StarMaint AI</h3>
+          <span class="ai-badge-system">System Control</span>
+          <span class="ai-badge-premium">Premium</span>
+        </div>
+        <div class="ai-chat-controls">
+          <button id="ai-fullscreen" aria-label="Toggle Fullscreen">⛶</button>
+          <button id="ai-tts-toggle" aria-label="Toggle TTS">🔊</button>
+          <button id="ai-minimize" aria-label="Minimize Chat">–</button>
+          <button id="ai-close" aria-label="Close Chat">✕</button>
+        </div>
+      </div>
+      <div class="ai-chat-body">
+        <div id="ai-messages" class="ai-chat-messages"></div>
+      </div>
+      <div class="ai-chat-input-container">
+        <textarea id="ai-input" class="ai-chat-input" placeholder="Type your message..."></textarea>
+        <button id="ai-send" class="ai-send-button">➤</button>
+        <button id="ai-voice" class="ai-voice-button">🎤</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="system-status-bar">
+    <div>System Control: Active</div>
+    <div><button id="toggle-system-control" style="background: transparent; border: none; color: white;">⚙️ Manage</button></div>
+  </div>
+  
+  <!-- Include meSpeak.js from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mespeak/1.10.0/mespeak.min.js"></script>
+  <script>
+    // Load meSpeak configuration and voice file
+    meSpeak.loadConfig("https://cdnjs.cloudflare.com/ajax/libs/mespeak/1.10.0/mespeak_config.json");
+    meSpeak.loadVoice("https://cdnjs.cloudflare.com/ajax/libs/mespeak/1.10.0/voices/en/en.json");
+  </script>
+  
+  <script>
+    /* Main JavaScript Code */
+
+    // Mistral API configuration (provided earlier)
+    const MISTRAL_CONFIG = {
+      apiKey: "tC4k3uKa40m6wgHWJLntCqmeCUha3U4I",
+      agentId: "ag:d090f459:20250228:star:6a752c7f",
+      endpoint: "https://api.mistral.ai/v1/agents/completions"
+    };
+
+    let chatHistory = [];
+    let isProcessing = false;
+    let isOpen = false;
+    let isMinimized = false;
+    let isTTSEnabled = true; // TTS is enabled by default
+
+    // DOM Elements
+    const chatButton = document.getElementById('ai-chat-button');
+    const openAssistantButton = document.getElementById('open-ai-assistant');
+    const chatPanel = document.getElementById('ai-chat-panel');
+    const closeBtn = document.getElementById('ai-close');
+    const minimizeBtn = document.getElementById('ai-minimize');
+    const fullscreenBtn = document.getElementById('ai-fullscreen');
+    const ttsToggleBtn = document.getElementById('ai-tts-toggle');
+    const sendBtn = document.getElementById('ai-send');
+    const voiceBtn = document.getElementById('ai-voice');
+    const inputField = document.getElementById('ai-input');
+    const messagesContainer = document.getElementById('ai-messages');
+    const toggleSystemControl = document.getElementById('toggle-system-control');
+
+    // Initialize assistant
+    function initAIAssistant() {
+      bindEvents();
+      // Get a welcome message via the AI API (Mistral) or fallback to a static welcome message
+      getAIResponse(getWelcomeMessage()).then(response => {
+        addAssistantMessage(response);
+      }).catch(() => {
+        addAssistantMessage(getWelcomeMessage());
+      });
+    }
+
+    // Bind event listeners
+    function bindEvents() {
+      if (openAssistantButton) openAssistantButton.addEventListener('click', toggleChat);
+      if (chatButton) chatButton.addEventListener('click', toggleChat);
+      if (fullscreenBtn) fullscreenBtn.addEventListener('click', toggleFullScreen);
+      if (ttsToggleBtn) {
+        ttsToggleBtn.addEventListener('click', () => {
+          isTTSEnabled = !isTTSEnabled;
+          ttsToggleBtn.textContent = isTTSEnabled ? '🔊' : '🔇';
+        });
+      }
+      if (closeBtn) closeBtn.addEventListener('click', closeChat);
+      if (minimizeBtn) minimizeBtn.addEventListener('click', toggleMinimize);
+      if (sendBtn && inputField) {
+        sendBtn.addEventListener('click', sendMessage);
+        inputField.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+          }
+          setTimeout(() => {
+            inputField.style.height = 'auto';
+            inputField.style.height = inputField.scrollHeight + 'px';
+          }, 0);
+        });
+      }
+      if (voiceBtn) voiceBtn.addEventListener('click', toggleVoiceInput);
+      toggleSystemControl.addEventListener('click', showSystemControlPanel);
+    }
+
+    // Toggle chat panel visibility
+    function toggleChat() {
+      chatPanel.classList.toggle('active');
+      isOpen = chatPanel.classList.contains('active');
+    }
+    function closeChat() {
+      chatPanel.classList.remove('active');
+      isOpen = false;
+    }
+    function toggleMinimize() {
+      chatPanel.classList.toggle('minimized');
+      isMinimized = chatPanel.classList.contains('minimized');
+    }
+    function toggleFullScreen() {
+      chatPanel.classList.toggle('fullscreen');
+    }
+
+    // Show system control panel (placeholder)
+    function showSystemControlPanel() {
+      addSystemMessage("System Control Panel\n\nStatus: Active\nPermissions: Full access\nMode: Administrator\n\nThe AI assistant has complete system control.");
+      if (!isOpen) toggleChat();
+    }
+
+    // Add messages
+    function addUserMessage(text) {
+      const message = document.createElement('div');
+      message.className = 'ai-message user';
+      message.innerHTML = `<div class="ai-avatar">👤</div><div class="ai-message-content">${formatMessageText(text)}</div>`;
+      messagesContainer.appendChild(message);
+      scrollToBottom();
+      chatHistory.push({ role: 'user', content: text });
+    }
+    function addAssistantMessage(text, actions = []) {
+      const message = document.createElement('div');
+      message.className = 'ai-message assistant';
+      let actionsHtml = '';
+      if (actions.length > 0) {
+        actionsHtml = `<div class="ai-message-actions">${actions.map(action => `<button class="ai-action-button" data-action="${action.action}">${action.label}</button>`).join('')}</div>`;
+      }
+      message.innerHTML = `<div class="ai-avatar">🤖</div><div class="ai-message-content">${formatMessageText(text)} ${actionsHtml}</div>`;
+      messagesContainer.appendChild(message);
+      scrollToBottom();
+      chatHistory.push({ role: 'assistant', content: text, actions: actions });
+      if (isTTSEnabled) {
+        // Strip HTML tags before speaking
+        const plainText = text.replace(/<[^>]+>/g, '');
+        speakText(plainText);
+      }
+    }
+    function addSystemMessage(text, actions = []) {
+      const message = document.createElement('div');
+      message.className = 'ai-message system';
+      let actionsHtml = '';
+      if (actions.length > 0) {
+        actionsHtml = `<div class="ai-message-actions">${actions.map(action => `<button class="ai-action-button" data-action="${action.action}">${action.label}</button>`).join('')}</div>`;
+      }
+      message.innerHTML = `<div class="ai-avatar">⚙️</div><div class="ai-message-content">${formatMessageText(text)} ${actionsHtml}</div>`;
+      messagesContainer.appendChild(message);
+      scrollToBottom();
+    }
+
+    // Typing indicator
+    function showTypingIndicator() {
+      const indicator = document.createElement('div');
+      indicator.className = 'ai-message assistant typing-indicator';
+      indicator.id = 'ai-typing-indicator';
+      indicator.innerHTML = `<div class="ai-avatar">🤖</div><div class="ai-typing-indicator"><span class="ai-typing-dot"></span><span class="ai-typing-dot"></span><span class="ai-typing-dot"></span></div>`;
+      messagesContainer.appendChild(indicator);
+      scrollToBottom();
+    }
+    function hideTypingIndicator() {
+      const indicator = document.getElementById('ai-typing-indicator');
+      if (indicator) indicator.remove();
+    }
+
+    // Send message from input
+    function sendMessage() {
+      if (!inputField.value.trim()) return;
+      const text = inputField.value.trim();
+      inputField.value = '';
+      addUserMessage(text);
+      if (text.toLowerCase().startsWith("search:")) {
+        // Use web search for queries starting with "search:"
+        const query = text.substring(7).trim();
+        performWebSearch(query)
+          .then(results => {
+            let responseText = "Web Search Results:\n\n";
+            if (results.length === 0) {
+              responseText += "No results found.";
+            } else {
+              results.forEach((result, i) => {
+                responseText += `${i + 1}. ${result.title}\n${result.snippet}\n${result.link}\n\n`;
+              });
+            }
+            addAssistantMessage(responseText);
+          })
+          .catch(err => addAssistantMessage("Error performing web search: " + err.message));
+      } else {
+        // Otherwise, call the AI API for a response
+        showTypingIndicator();
+        getAIResponse(text)
+          .then(response => {
+            hideTypingIndicator();
+            addAssistantMessage(response);
+          })
+          .catch(error => {
+            hideTypingIndicator();
+            addAssistantMessage("Error processing your request: " + error.message);
+          });
+      }
+    }
+
+    // Call the Mistral AI API using provided configuration
+    async function getAIResponse(userMessage) {
+      try {
+        const requestBody = {
+          agent_id: MISTRAL_CONFIG.agentId,
+          messages: [{ role: "user", content: userMessage }]
+        };
+        const response = await fetch(MISTRAL_CONFIG.endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${MISTRAL_CONFIG.apiKey}`
+          },
+          body: JSON.stringify(requestBody)
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`API error: ${response.status} - ${errorData.error?.message || response.statusText}`);
+        }
+        const data = await response.json();
+        // Assuming the response is in data.choices[0].message.content
+        return data.choices[0].message.content;
+      } catch (error) {
+        console.error('Error calling AI API:', error);
+        throw error;
+      }
+    }
+
+    // Perform web search using DuckDuckGo's API via AllOrigins proxy
+    async function performWebSearch(query) {
+      const proxy = "https://api.allorigins.hexocode.repl.co/get?disableCache=true&url=";
+      const targetUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_redirect=1&skip_disambig=1`;
+      const url = proxy + encodeURIComponent(targetUrl);
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        // AllOrigins returns a JSON string inside data.contents so we need to parse it.
+        const parsed = JSON.parse(data.contents);
+        let results = [];
+        if (parsed.Abstract) {
+          results.push({
+            title: parsed.Heading || query,
+            snippet: parsed.Abstract,
+            link: `https://duckduckgo.com/?q=${encodeURIComponent(query)}`
+          });
+        }
+        if (parsed.RelatedTopics && parsed.RelatedTopics.length > 0) {
+          parsed.RelatedTopics.slice(0, 3).forEach(topic => {
+            if (topic.Text && topic.FirstURL) {
+              results.push({
+                title: topic.Text.split(" - ")[0] || "Result",
+                snippet: topic.Text,
+                link: topic.FirstURL
+              });
+            }
+          });
+        }
+        return results;
+      } catch (error) {
+        console.error('Error performing web search:', error);
+        throw error;
+      }
+    }
+
+    // Voice input using Web Speech API (requires HTTPS and permissions)
+    function toggleVoiceInput() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        addAssistantMessage("Voice input is not supported in this browser.");
+        return;
+      }
+      let recognition;
+      try {
+        recognition = new SpeechRecognition();
+      } catch (err) {
+        console.error(err);
+        addAssistantMessage("Error initializing voice recognition.");
+        return;
+      }
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      voiceBtn.disabled = true;
+      voiceBtn.textContent = '⏹️';
+      recognition.onresult = (event) => {
+        inputField.value = event.results[0][0].transcript;
+      };
+      recognition.onend = () => {
+        voiceBtn.disabled = false;
+        voiceBtn.textContent = '🎤';
+        if (inputField.value.trim() !== "") sendMessage();
+      };
+      recognition.onerror = (event) => {
+        console.error("Voice recognition error:", event.error);
+        voiceBtn.disabled = false;
+        voiceBtn.textContent = '🎤';
+        addAssistantMessage("Voice recognition error: " + event.error);
+      };
+      recognition.start();
+    }
+
+    // TTS using meSpeak.js
+    function speakText(text) {
+      if (typeof meSpeak !== "undefined") {
+        meSpeak.speak(text, { amplitude: 100, wordgap: 0, pitch: 50, speed: 175 });
+      } else {
+        console.warn("meSpeak is not available.");
+      }
+    }
+
+    // Simple markdown-like formatting
+    function formatMessageText(text) {
+      let formatted = text.replace(/\n/g, '<br>');
+      formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      formatted = formatted.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+      return formatted;
+    }
+
+    // Scroll messages to bottom
+    function scrollToBottom() {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Static welcome message (fallback)
+    function getWelcomeMessage() {
+      const hour = new Date().getHours();
+      const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+      return `${greeting}! I'm your StarMaint AI assistant with full system control, web search, voice input, and TTS (via meSpeak.js) capabilities.
+      
+I can help with tasks like work orders, maintenance scheduling, system commands, and web searches.
+      
+What would you like me to help you with today?`;
+    }
+
+    document.addEventListener('DOMContentLoaded', initAIAssistant);
+  </script>
+</body>
+</html>
